@@ -1,5 +1,5 @@
 import numpy as np
-from link_right import n_link_right as n_l1
+from link_nums.link_right import n_link_right as n_l1
 
 
 def n_link_up_recs_h_even(s: int, recs_h: int, recs_v: int):

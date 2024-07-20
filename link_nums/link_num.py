@@ -1,7 +1,7 @@
-from link_right import n_link_right as n_l1
-from link_up import n_link_up as n_l2
-from link_left import n_link_left as n_l3
-from link_down import n_link_down as n_l4
+from link_nums.link_right import n_link_right as n_l1
+from link_nums.link_up import n_link_up as n_l2
+from link_nums.link_left import n_link_left as n_l3
+from link_nums.link_down import n_link_down as n_l4
 
 
 def n_links(s: int, recs_h: int, recs_v: int):
