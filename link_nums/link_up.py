@@ -15,6 +15,9 @@ def n_link_up_recs_h_even(s: int, recs_h: int, recs_v: int):
         return None
     elif (s == L_h):
         return n_l1(s=L_h-1, recs_h=recs_h, recs_v=recs_v) + 1
+    # special case for last column element of the first row for recs_h = 2
+    elif (recs_h == 2) and (s == 2*L_h - 2):
+        return n_l1(s=s - 2, recs_h=recs_h, recs_v=recs_v) + 2
 
     # last column elements that are even
     elif (((s - (L_h - 1)) % L_h) == (L_h - 1)) and ((s % 2) == 0):

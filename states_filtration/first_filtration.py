@@ -4,112 +4,81 @@ Filtration here is realized by G_z, as we impose Gauss law as i.e. G_z |\psi> = 
 """
 
 import numpy as np
-from link_nums.link_num import n_links
+import sympy as sp
+from link_nums.link_num import n_links as get_links
 from link_nums.link_up import n_link_up
 from scipy.linalg import null_space
 
-def n_links_list(recs_h: int, recs_v: int) -> list:
-    """
-    This function takes information about links attached to a given site in form of a tuple.
-    As it is provided by the function n_links() in link_nums.link_num.
-    Afterward this function forms a list of said tuples.
 
-    :param recs_h: number of rectangles horizontally
-    :param recs_v: number of rectangles vertically
-    :return:
-    n_links_list (list) : list of tuples
-    """
-
+def generate_state_array(recs_h: int, recs_v: int):
     L_h = recs_h + 1
     L_v = 2 * recs_v + 2
-    n_sites = L_h * L_v - 2
+    num_sites = L_h * L_v - 2
+    num_links = int(1 + n_link_up(s=num_sites - 1, recs_h=recs_h, recs_v=recs_v))
 
-    n_links_list = []
-    [n_links_list.append(n_links(s=_s, recs_h=recs_h, recs_v=recs_v)) for _s in range(n_sites)]
-    return n_links_list
+    # Create the symbolic variables for mL and mR
+    mL = [sp.symbols(f'mL{i}') for i in range(num_links)]
+    mR = [sp.symbols(f'mR{i}') for i in range(num_links)]
 
+    # Initialize the state array with None
+    state_array = [None] * (2 * num_links)
+    for i in range(num_links):
+        state_array[2 * i] = mL[i]
+        state_array[2 * i + 1] = mR[i]
 
-def prepared_list(recs_h: int, recs_v: int) -> list:
-    L_h = recs_h + 1
-    L_v = 2 * recs_v + 2
+    # Dictionary to store the constraints (site: [links])
+    constraints = {}
 
-    n_sites = L_h * L_v - 2
+    # Create the Gauss law constraints for each site
+    for site in range(num_sites):
+        links = get_links(s=site, recs_h=recs_h, recs_v=recs_v)
 
-    num_links = 1 + n_link_up(s=n_sites - 1, recs_h=recs_h, recs_v=recs_v)
+        site_constraints = [
+            mL[int(links[0])] if links[0] is not None else None,
+            mL[int(links[1])] if links[1] is not None else None,
+            mR[int(links[2])] if links[2] is not None else None,
+            mR[int(links[3])] if links[3] is not None else None
+        ]
 
-    links = n_links_list(recs_h=recs_h, recs_v=recs_v)
+        constraints[site] = site_constraints
 
-    prepped_list = []
-    for link_tuple in links:
-        (i0, i1, i2, i3) = link_tuple
+    # Fill the state array based on constraints
+    free_parameters = []
+    # Iterate through the constraints dictionary
+    for site, constraint in constraints.items():
+        # Initialize a list to store the non-None constraints
+        non_none_constraints = [link for link in constraint if link is not None]
 
-        # array to be used further in vertical stacking
-        sample_arr = np.zeros(2 * int(num_links))
+        # Deal with the dependencies
+        dependent_var = non_none_constraints[-1]
+        last_char = int(str(dependent_var)[2:])  # i.e. reading 2 as int off mR2
 
-        # now do all the checking and translation into bigger array
-        if i0 is not None:
-            i0 = int(i0)
-            sample_arr[2 * i0] = 1
-        if i1 is not None:
-            i1 = int(i1)
-            sample_arr[2 * i1] = 1
-        if i2 is not None:
-            i2 = int(i2)
-            sample_arr[2 * i2 + 1] = 1
-        if i3 is not None:
-            i3 = int(i3)
-            sample_arr[2 * i3 + 1] = 1
+        independent_vars = non_none_constraints[:-1]
+        dependent_expr = -sum(independent_vars)
+        # Update state_array with the dependent expression
+        for i, link in enumerate(constraint): # TODO: this constraint or the non_none_constraints?
+            if link == dependent_var:
+                if i == 0 or i == 1:
+                    index = 2 * last_char
+                else:
+                    index = 2 * last_char + 1
+                # print(state_array[index])
+                # print(dependent_expr)
+                # quit()
+                state_array[index] = dependent_expr
 
-        prepped_list.append(sample_arr)
+        # Write down the free parameters
+        free_parameters.extend(independent_vars)
 
-    return prepped_list
+    return state_array, free_parameters
 
-
-def coefficient_matrix(recs_h: int, recs_v: int) -> np.array:
-    prepped_list = prepared_list(recs_h=recs_h, recs_v=recs_v)
-    result_array = np.vstack(prepped_list)
-
-    return result_array
-
-
-def states_gz_filtered(recs_h: int, recs_v: int)-> list:
-    null_space_vectors: np.ndarray = null_space(coefficient_matrix(recs_h=recs_h, recs_v=recs_v))
-    list_of_vectors = [null_space_vectors[:, i] for i in range(null_space_vectors.shape[1])]
-
-    return list_of_vectors
 
 
 recs_h = 2
 recs_v = 2
 
-res = states_gz_filtered(recs_h=recs_h, recs_v=recs_v)
-print(res)
-#TODO: implement finding free parameters, as it is done in the notebook.
-# avoid fractions in vectors and shit, just cut off n_links tuple where needed
-#TODO: afterwards, impose group constraint. It has to be applied during looping
-# through free parameters, so that less possible states need to be checked.
-quit()
-A = coefficient_matrix(recs_h=recs_h, recs_v=recs_v)
-print(A.shape)
 
+state_array, free_parameters = generate_state_array(recs_h=recs_h, recs_v=recs_v)
 
-ns_A = null_space(A)
-print(ns_A.shape)
-
-
-# L_h = recs_h + 1
-# L_v = 2 * recs_v + 2
-# n_sites = L_h * L_v - 2
-#
-# num_links = 1 + n_link_up(s=n_sites-1, recs_h=recs_h, recs_v=recs_v)
-#
-#
-# res = n_links_list(recs_h=recs_h, recs_v=recs_v)
-# print(res)
-
-
-# L_h = recs_h + 1
-# L_v = 2 * recs_v + 2
-# n_sites = L_h * L_v - 2
-#
-# [print(n_links(s=_s, recs_h=2, recs_v=2)) for _s in range(n_sites)]
+print("State Array:", state_array)
+print("Free Parameters:", free_parameters)
