@@ -74,99 +74,67 @@ def generate_state_array(recs_h: int, recs_v: int):
 
 
 
+
+
+
+
+
+
+
+##### WORKING ON THE SUBSTITUTION BELOW #####
+
+
+
+
+def substitute_and_generate_lists(original_list, symbol, values):
+    result_lists = []
+    substitution_indices = []
+
+    if not isinstance(values, list):
+        values = [values]
+# TODO: change symbol argument into index representing the symbol
+    for value in values:
+        new_list = []
+        indices = []
+
+        for index, item in enumerate(original_list):
+            substituted_item = item.subs(symbol, value)
+            new_list.append(substituted_item)
+            if substituted_item != item:
+                indices.append(index)
+
+        result_lists.append(new_list)
+        substitution_indices.append(indices)
+
+    return result_lists, substitution_indices[0]
+
+
+def neighbor_indices(indices: list) -> list:
+    return [(i + 1) if ((i % 2) == 0) else (i - 1) for i in indices]
+
+
+
+
+def update_states(state_array, current_subs):
+    updated_array = [elem.subs(current_subs) if isinstance(elem, sp.Basic) else elem for elem in state_array]
+    return updated_array
+
+
 recs_h = 2
 recs_v = 2
 
-
 state_array, free_parameters = generate_state_array(recs_h=recs_h, recs_v=recs_v)
-
-print("State Array:", state_array)
-print("Free Parameters:", free_parameters)
-
-
-
-
-
-
-
-# TODO: try out stuff below for substitutions
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import sympy as sp
-
-# Example state array and free parameters
-# Assuming you already have these from your previous steps
-# state_array, free_parameters = generate_state_array(recs_h, recs_v)
-
-# Generate all possible values for free parameters
 possible_values = [0, -0.5, 0.5]
 
-# Get the unique free parameters (symbols)
-unique_free_parameters = list(set(free_parameters))
+result_lists, substitution_indices = substitute_and_generate_lists(state_array, sp.symbols('mL0'), [0, -0.5, 0.5])
+print(result_lists, substitution_indices)
+
+neighbors = neighbor_indices(substitution_indices)
+
+# TODO: neighbor symbols are to be passed as an argument to substitute_and_generate_lists()
+neighbor_symbols = [state_array[i] for i in neighbors]
+
+print(neighbor_symbols)
 
 
-# Function to check condition (*)
-def check_condition(mL, mR):
-    return (mL, mR) in [(0, 0.5), (0, -0.5), (0.5, 0), (-0.5, 0)]
 
-
-# Recursive function to build valid states
-def build_valid_states(state_array, free_params, index, current_subs):
-    if index == len(free_params):
-        # Substitute the current set of values into state_array
-        substituted_array = [elem.subs(current_subs) if isinstance(elem, sp.Basic) else elem for elem in state_array]
-
-        # Check if the substituted state_array satisfies condition (*)
-        for i in range(0, len(substituted_array), 2):
-            mL = substituted_array[i]
-            mR = substituted_array[i + 1]
-            if not check_condition(mL, mR):
-                return []  # Invalid state, discard
-
-        # Valid state, return it
-        return [substituted_array]
-
-    valid_states = []
-
-    # Try all possible values for the current free parameter
-    for value in possible_values:
-        # Copy current_subs to avoid modifying the same dictionary across different branches
-        new_subs = current_subs.copy()
-        new_subs[free_params[index]] = value
-
-        # Check partial state early
-        partial_substituted_array = [elem.subs(new_subs) if isinstance(elem, sp.Basic) else elem for elem in
-                                     state_array]
-        for i in range(0, len(partial_substituted_array), 2):
-            mL = partial_substituted_array[i]
-            mR = partial_substituted_array[i + 1]
-            if mL in new_subs.values() and mR in new_subs.values() and not check_condition(mL, mR):
-                break
-        else:
-            valid_states.extend(build_valid_states(state_array, free_params, index + 1, new_subs))
-
-    return valid_states
-
-
-# Start the recursive process
-initial_subs = {}
-valid_states = build_valid_states(state_array, unique_free_parameters, 0, initial_subs)
-
-print("Valid states:")
-for state in valid_states:
-    print(state)
