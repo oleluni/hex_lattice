@@ -120,14 +120,32 @@ def update_states(state_array, current_subs):
     return updated_array
 
 
+
+
+
+
 recs_h = 2
 recs_v = 2
 
 state_array, free_parameters = generate_state_array(recs_h=recs_h, recs_v=recs_v)
 possible_values = [0, -0.5, 0.5]
 
-result_lists, substitution_indices = substitute_and_generate_lists(state_array, sp.symbols('mL0'), [0, -0.5, 0.5])
+result_lists, substitution_indices = substitute_and_generate_lists(state_array, sp.symbols('mL0'), possible_values)
+
 print(result_lists, substitution_indices)
+# now gotta identify neighbours of symbols, which were substituted and figure out which values can they take
+result_lists_1, substitution_indices_1 = \
+    [substitute_and_generate_lists(array, sp.symbols('mL0'), possible_values) for array in result_lists]
+
+
+
+
+
+
+
+#TODO: 1. instead of state_array must have a list of state_array lists, which emerged after one free parameter substitution
+# loop through state_array lists (result_lists)
+
 
 neighbors = neighbor_indices(substitution_indices)
 
@@ -136,5 +154,6 @@ neighbor_symbols = [state_array[i] for i in neighbors]
 
 print(neighbor_symbols)
 
-
+for param in free_parameters:
+    result_lists, substitution_indices = substitute_and_generate_lists(state_array, param, possible_values)
 
